@@ -1,3 +1,4 @@
+//models/user
 const mongoose = require("mongoose")
 const bcrypt = require("bcryptjs")
 
@@ -13,34 +14,11 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
   },
-  phone: {
-    type: String,
-    unique: true,
-    sparse: true,
-  },
   password: {
     type: String,
     required: [true, "Please provide a password"],
-    minlength: 8,
+    minlength: 6,
     select: false,
-  },
-  emailVerified: {
-    type: Boolean,
-    default: false,
-  },
-  emailVerificationToken: String,
-  emailVerificationExpires: Date,
-  emailVerificationOTP: String,
-  emailOTPExpires: Date,
-  phoneVerified: {
-    type: Boolean,
-    default: false,
-  },
-  phoneVerificationOTP: String,
-  phoneOTPExpires: Date,
-  phoneOTPAttempts: {
-    type: Number,
-    default: 0,
   },
   role: {
     type: String,
