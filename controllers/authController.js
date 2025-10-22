@@ -13,52 +13,30 @@ exports.signup = async (req, res, next) => {
   try {
     const { name, email, phone, password, confirmPassword, signupMethod } = req.body
 
+    // Validation
     if (!name || !password || !confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-        details: {
-          name: !name ? "Full name is required" : null,
-          password: !password ? "Password is required" : null,
-          confirmPassword: !confirmPassword ? "Password confirmation is required" : null,
-        },
-      })
+      return res.status(400).json({ message: "Please provide name, password, and confirm password" })
     }
 
     if (signupMethod === "email" && !email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required for email signup",
-        details: { email: "Please provide a valid email address" },
-      })
+      return res.status(400).json({ message: "Please provide email for email signup" })
     }
 
     if (signupMethod === "phone" && !phone) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone number is required for phone signup",
-        details: { phone: "Please provide a valid phone number" },
-      })
+      return res.status(400).json({ message: "Please provide phone number for phone signup" })
     }
 
     // Check password match
     if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-        details: { confirmPassword: "Passwords must match exactly" },
-      })
+      return res.status(400).json({ message: "Passwords do not match" })
     }
 
     // Validate password strength
     const passwordValidation = validatePassword(password)
     if (!passwordValidation.isValid) {
       return res.status(400).json({
-        success: false,
         message: "Password does not meet security requirements",
-        details: {
-          passwordRequirements: passwordValidation.errors,
-        },
+        errors: passwordValidation.errors,
       })
     }
 
@@ -66,22 +44,14 @@ exports.signup = async (req, res, next) => {
     if (email) {
       const emailExists = await User.findOne({ email })
       if (emailExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Email already registered",
-          details: { email: "This email is already associated with an account" },
-        })
+        return res.status(400).json({ message: "Email already registered" })
       }
     }
 
     if (phone) {
       const phoneExists = await User.findOne({ phone })
       if (phoneExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Phone number already registered",
-          details: { phone: "This phone number is already associated with an account" },
-        })
+        return res.status(400).json({ message: "Phone number already registered" })
       }
     }
 
@@ -105,6 +75,8 @@ exports.signup = async (req, res, next) => {
       verificationData = {
         method: "email",
         message: "OTP sent to your email. Please verify within 10 minutes.",
+        // In production, send actual email here
+        // For demo: return OTP
         otp: process.env.NODE_ENV === "development" ? otp : undefined,
       }
     } else if (signupMethod === "phone") {
@@ -117,6 +89,8 @@ exports.signup = async (req, res, next) => {
       verificationData = {
         method: "phone",
         message: "OTP sent to your phone. Please verify within 5 minutes.",
+        // In production, send actual SMS here
+        // For demo: return OTP
         otp: process.env.NODE_ENV === "development" ? otp : undefined,
       }
     }
