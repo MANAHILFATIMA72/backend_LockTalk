@@ -1,7 +1,7 @@
 const User = require("../models/User")
 const jwt = require("jsonwebtoken")
 const crypto = require("crypto")
-const { sendPasswordResetEmail } = require("../services/emailService")
+const { sendPasswordResetEmail, sendVerificationEmail } = require("../services/emailService")
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -206,6 +206,7 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email: email.toLowerCase() })
     if (!user) {
       // Don't reveal if email exists for security
+      console.log("[v0] Forgot password request for non-existent email:", email)
       return res.status(200).json({
         success: true,
         message: "If an account exists with this email, a password reset link has been sent.",
@@ -220,16 +221,21 @@ exports.forgotPassword = async (req, res, next) => {
     user.resetTokenExpiry = resetTokenExpiry
     await user.save()
 
+    console.log("[v0] Reset token generated for user:", user.email)
+
     // Send email
     try {
       await sendPasswordResetEmail(user.email, resetToken, user.name)
+      console.log("[v0] Password reset email sent to:", user.email)
     } catch (emailError) {
+      console.error("[v0] Email sending failed:", emailError.message)
       user.resetToken = undefined
       user.resetTokenExpiry = undefined
       await user.save()
       return res.status(500).json({
         success: false,
         message: "Failed to send reset email. Please try again later.",
+        error: process.env.NODE_ENV === "development" ? emailError.message : undefined,
       })
     }
 
@@ -238,6 +244,7 @@ exports.forgotPassword = async (req, res, next) => {
       message: "Password reset link has been sent to your email. It will expire in 15 minutes.",
     })
   } catch (error) {
+    console.error("[v0] Forgot password error:", error)
     next(error)
   }
 }
@@ -259,11 +266,14 @@ exports.verifyResetToken = async (req, res, next) => {
     }).select("+resetToken +resetTokenExpiry")
 
     if (!user) {
+      console.log("[v0] Invalid or expired token attempt")
       return res.status(400).json({
         success: false,
         message: "Invalid or expired reset token. Please request a new password reset.",
       })
     }
+
+    console.log("[v0] Token verified for user:", user.email)
 
     res.status(200).json({
       success: true,
@@ -271,18 +281,27 @@ exports.verifyResetToken = async (req, res, next) => {
       email: user.email,
     })
   } catch (error) {
+    console.error("[v0] Token verification error:", error)
     next(error)
   }
 }
 
 exports.resetPassword = async (req, res, next) => {
   try {
-    const { token, newPassword } = req.body
+    const { token, newPassword, confirmPassword } = req.body
 
     if (!token) {
       return res.status(400).json({
         success: false,
         message: "Reset token is required",
+      })
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
+        field: "confirmPassword",
       })
     }
 
@@ -301,6 +320,7 @@ exports.resetPassword = async (req, res, next) => {
     }).select("+password +resetToken +resetTokenExpiry +invalidatedTokens")
 
     if (!user) {
+      console.log("[v0] Invalid or expired token during reset")
       return res.status(400).json({
         success: false,
         message: "Invalid or expired reset token. Please request a new password reset.",
@@ -312,17 +332,27 @@ exports.resetPassword = async (req, res, next) => {
     user.resetToken = undefined
     user.resetTokenExpiry = undefined
 
-    // Invalidate all previous tokens
+    // Invalidate all previous tokens for security
     const oldToken = generateToken(user._id)
     user.invalidatedTokens.push(oldToken)
 
     await user.save()
+
+    console.log("[v0] Password reset successfully for user:", user.email)
+
+    // Send confirmation email
+    try {
+      await sendVerificationEmail(user.email, user.name)
+    } catch (emailError) {
+      console.error("[v0] Confirmation email failed (non-critical):", emailError.message)
+    }
 
     res.status(200).json({
       success: true,
       message: "Password has been reset successfully. Please log in with your new password.",
     })
   } catch (error) {
+    console.error("[v0] Reset password error:", error)
     next(error)
   }
 }
