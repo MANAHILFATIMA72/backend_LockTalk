@@ -1,4 +1,3 @@
-//models/user
 const mongoose = require("mongoose")
 const bcrypt = require("bcryptjs")
 
@@ -6,6 +5,10 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, "Please provide a name"],
+    validate: {
+      validator: (v) => /^[a-zA-Z\s]+$/.test(v) && v.length >= 3 && v.length <= 30,
+      message: "Name must contain only alphabets and spaces, and be between 3-30 characters",
+    },
   },
   email: {
     type: String,
@@ -17,8 +20,12 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, "Please provide a password"],
-    minlength: 6,
+    minlength: 8,
     select: false,
+    validate: {
+      validator: (v) => /[A-Z]/.test(v) && /[a-z]/.test(v) && /[0-9]/.test(v) && /[@#$%&*]/.test(v) && !/\s/.test(v),
+      message: "Password must contain uppercase, lowercase, number, and special character",
+    },
   },
   role: {
     type: String,
