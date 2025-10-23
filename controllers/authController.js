@@ -1,10 +1,16 @@
 const User = require("../models/User")
 const jwt = require("jsonwebtoken")
+const crypto = require("crypto")
+const { sendPasswordResetEmail } = require("../services/emailService")
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   })
+}
+
+const generateResetToken = () => {
+  return crypto.randomBytes(32).toString("hex")
 }
 
 const validateName = (name) => {
@@ -178,6 +184,143 @@ exports.getMe = async (req, res, next) => {
         role: user.role,
         createdAt: user.createdAt,
       },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body
+
+    const emailError = validateEmail(email)
+    if (emailError) {
+      return res.status(400).json({
+        success: false,
+        message: emailError,
+        field: "email",
+      })
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists with this email, a password reset link has been sent.",
+      })
+    }
+
+    // Generate reset token
+    const resetToken = generateResetToken()
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
+    user.resetToken = resetToken
+    user.resetTokenExpiry = resetTokenExpiry
+    await user.save()
+
+    // Send email
+    try {
+      await sendPasswordResetEmail(user.email, resetToken, user.name)
+    } catch (emailError) {
+      user.resetToken = undefined
+      user.resetTokenExpiry = undefined
+      await user.save()
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send reset email. Please try again later.",
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset link has been sent to your email. It will expire in 15 minutes.",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.verifyResetToken = async (req, res, next) => {
+  try {
+    const { token } = req.body
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token is required",
+      })
+    }
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() },
+    }).select("+resetToken +resetTokenExpiry")
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token. Please request a new password reset.",
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      email: user.email,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token is required",
+      })
+    }
+
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
+      return res.status(400).json({
+        success: false,
+        message: passwordError,
+        field: "password",
+      })
+    }
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() },
+    }).select("+password +resetToken +resetTokenExpiry +invalidatedTokens")
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token. Please request a new password reset.",
+      })
+    }
+
+    // Update password
+    user.password = newPassword
+    user.resetToken = undefined
+    user.resetTokenExpiry = undefined
+
+    // Invalidate all previous tokens
+    const oldToken = generateToken(user._id)
+    user.invalidatedTokens.push(oldToken)
+
+    await user.save()
+
+    res.status(200).json({
+      success: true,
+      message: "Password has been reset successfully. Please log in with your new password.",
     })
   } catch (error) {
     next(error)

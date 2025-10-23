@@ -27,6 +27,19 @@ const userSchema = new mongoose.Schema({
       message: "Password must contain uppercase, lowercase, number, and special character",
     },
   },
+  resetToken: {
+    type: String,
+    select: false,
+  },
+  resetTokenExpiry: {
+    type: Date,
+    select: false,
+  },
+  invalidatedTokens: {
+    type: [String],
+    default: [],
+    select: false,
+  },
   role: {
     type: String,
     enum: ["user", "admin"],
