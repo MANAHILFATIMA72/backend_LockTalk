@@ -27,6 +27,14 @@ const getTransporter = () => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
       },
+      connectionTimeout: 5 * 60 * 1000, // 5 minutes
+      socketTimeout: 5 * 60 * 1000,     // 5 minutes
+      pool: {
+        maxConnections: 1,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+      },
     })
   }
   return transporter
