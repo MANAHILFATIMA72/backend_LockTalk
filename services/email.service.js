@@ -3,6 +3,7 @@ import { Resend } from "resend"
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 console.log("[v0] Initializing Resend email service")
+console.log("[v0] RESEND_API_KEY present:", !!process.env.RESEND_API_KEY)
 
 export const sendOTPEmail = async (email, otp) => {
   try {
@@ -11,8 +12,10 @@ export const sendOTPEmail = async (email, otp) => {
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    console.log("[v0] Attempting to send OTP email to:", email)
+
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "Lock Talk - Your OTP Verification Code",
       html: `
@@ -25,10 +28,12 @@ export const sendOTPEmail = async (email, otp) => {
         </div>
       `,
     })
-    console.log(`[v0] OTP email sent to ${email}`)
+
+    console.log("[v0] OTP email sent successfully to", email, "Response:", response)
     return true
   } catch (error) {
-    console.error("[v0] Error sending OTP email:", error.message)
+    console.error("[v0] Error sending OTP email:", error)
+    console.error("[v0] Error details:", error.message, error.response?.body)
     return false
   }
 }
@@ -40,8 +45,10 @@ export const send2FAEnabledEmail = async (email, userName) => {
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    console.log("[v0] Sending 2FA enabled email to:", email)
+
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "2-Step Verification turned on",
       html: `
@@ -66,7 +73,8 @@ export const send2FAEnabledEmail = async (email, userName) => {
         </div>
       `,
     })
-    console.log(`[v0] 2FA enabled email sent to ${email}`)
+
+    console.log("[v0] 2FA enabled email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending 2FA enabled email:", error.message)
@@ -81,8 +89,8 @@ export const send2FADisabledEmail = async (email, userName) => {
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "2-Step Verification turned off",
       html: `
@@ -94,7 +102,8 @@ export const send2FADisabledEmail = async (email, userName) => {
         </div>
       `,
     })
-    console.log(`[v0] 2FA disabled email sent to ${email}`)
+
+    console.log("[v0] 2FA disabled email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending 2FA disabled email:", error.message)
@@ -109,8 +118,8 @@ export const sendPasswordChangedEmail = async (email, userName) => {
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "Your password has been changed",
       html: `
@@ -121,7 +130,8 @@ export const sendPasswordChangedEmail = async (email, userName) => {
         </div>
       `,
     })
-    console.log(`[v0] Password changed email sent to ${email}`)
+
+    console.log("[v0] Password changed email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending password changed email:", error.message)
@@ -136,8 +146,8 @@ export const sendAccountDeactivatedEmail = async (email, userName, reason = "Pol
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "Account Deactivation Notice",
       html: `
@@ -148,7 +158,8 @@ export const sendAccountDeactivatedEmail = async (email, userName, reason = "Pol
         </div>
       `,
     })
-    console.log(`[v0] Account deactivation email sent to ${email}`)
+
+    console.log("[v0] Account deactivation email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending account deactivation email:", error.message)
@@ -163,8 +174,8 @@ export const sendAccountReactivatedEmail = async (email, userName) => {
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "Account Reactivated",
       html: `
@@ -174,7 +185,8 @@ export const sendAccountReactivatedEmail = async (email, userName) => {
         </div>
       `,
     })
-    console.log(`[v0] Account reactivation email sent to ${email}`)
+
+    console.log("[v0] Account reactivation email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending account reactivation email:", error.message)
@@ -189,8 +201,8 @@ export const sendRoleChangeNotificationEmail = async (email, userName, oldRole, 
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: "Your role has been updated",
       html: `
@@ -201,7 +213,8 @@ export const sendRoleChangeNotificationEmail = async (email, userName, oldRole, 
         </div>
       `,
     })
-    console.log(`[v0] Role change notification email sent to ${email}`)
+
+    console.log("[v0] Role change notification email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending role change email:", error.message)
@@ -216,8 +229,8 @@ export const sendModeratorActionNotificationEmail = async (email, userName, acti
       return false
     }
 
-    await resend.emails.send({
-      from: "noreply@locktalk.app",
+    const response = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
       subject: `Moderation Action: ${action}`,
       html: `
@@ -230,7 +243,8 @@ export const sendModeratorActionNotificationEmail = async (email, userName, acti
         </div>
       `,
     })
-    console.log(`[v0] Moderator action notification email sent to ${email}`)
+
+    console.log("[v0] Moderator action notification email sent to", email)
     return true
   } catch (error) {
     console.error("[v0] Error sending moderator action email:", error.message)
