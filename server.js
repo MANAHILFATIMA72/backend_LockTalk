@@ -66,6 +66,62 @@ app.use("/api/admin", adminRoutes)
 app.use("/api/rbac", rbacRoutes)
 app.use("/api/moderator", moderatorRoutes)
 
+
+// ECDH public key routes for end-to-end encryption
+// Make sure your User model has an `ecdhPublicKey` field (e.g. Schema.Types.Mixed).
+app.put("/api/users/:id/ecdh-public-key", async (req, res) => {
+  try {
+    const { id } = req.params
+    const { publicKeyJwk } = req.body || {}
+
+    if (!publicKeyJwk) {
+      return res.status(400).json({ error: "publicKeyJwk is required" })
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { ecdhPublicKey: publicKeyJwk },
+      { new: true, select: "_id ecdhPublicKey" },
+    )
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    return res.json({
+      userId: user._id,
+      ecdhPublicKey: user.ecdhPublicKey,
+    })
+  } catch (error) {
+    console.error("[v0] Error saving ECDH public key:", error)
+    return res.status(500).json({ error: "Failed to save ECDH public key" })
+  }
+})
+
+app.get("/api/users/:id/ecdh-public-key", async (req, res) => {
+  try {
+    const { id } = req.params
+    const user = await User.findById(id).select("_id ecdhPublicKey")
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    if (!user.ecdhPublicKey) {
+      return res.status(404).json({ error: "User has no ECDH public key" })
+    }
+
+    return res.json({
+      userId: user._id,
+      ecdhPublicKey: user.ecdhPublicKey,
+    })
+  } catch (error) {
+    console.error("[v0] Error fetching ECDH public key:", error)
+    return res.status(500).json({ error: "Failed to fetch ECDH public key" })
+  }
+})
+
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Backend is running" })
 })

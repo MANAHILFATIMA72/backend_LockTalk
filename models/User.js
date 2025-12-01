@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+    ecdhPublicKey: {
+    type: mongoose.Schema.Types.Mixed, // or Object
+    required: false,
+  },
   email: {
     type: String,
     default: null,
