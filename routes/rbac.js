@@ -175,7 +175,7 @@ router.post("/assign-role", verifyRole(["admin", "super_admin"]), async (req, re
     // Store the old role for the email notification
     const oldRole = user.role
 
-    const requiresTwoFA = ["admin", "super_admin", "moderator", "support_staff"].includes(role) && !user.twoFAEnabled
+    const requiresTwoFA = [role === "admin"|| role === "super_admin" || role === "moderator" || role === "support_staff"].includes(role) && !user.twoFAEnabled
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
