@@ -1111,16 +1111,11 @@ router.post(
         })
       }
 
-      // Hash password before saving
-      const hashedPassword = await User.hashPassword(req.body.password)
-
-      // Don't set twoFARequired for regular new users
-      // It should only be required when an admin explicitly changes a user's role to admin/super_admin
       const newUser = new User({
         phoneNumber: normalizedPhone,
         email,
         name: req.body.name,
-        password: hashedPassword,
+        password: req.body.password,
         isActive: true,
         role: "user", // Default role for new users
         // twoFARequired is NOT set here - it will only be set when role changes to admin/super_admin
