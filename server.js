@@ -1,4 +1,3 @@
-
 // server.js
 import express from "express"
 import cors from "cors"
@@ -19,6 +18,7 @@ import uploadRoutes from "./routes/upload.js"
 import adminRoutes from "./routes/admin.js"
 import rbacRoutes from "./routes/rbac.js"
 import moderatorRoutes from "./routes/moderator.js"
+import messageRequestRoutes from "./routes/message-requests.js"
 
 dotenv.config()
 
@@ -60,6 +60,7 @@ app.set("io", io)
 app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/messages", messageRoutes)
+app.use("/api/message-requests", messageRequestRoutes)
 app.use("/api/calls", callRoutes)
 app.use("/api", uploadRoutes)
 app.use("/api/admin", adminRoutes)
@@ -242,11 +243,7 @@ io.on("connection", (socket) => {
     const { callerId, dbCallId } = data || {}
     try {
       if (dbCallId) {
-        await Call.findByIdAndUpdate(
-          dbCallId,
-          { status: "rejected", duration: 0, endTime: new Date() },
-          { new: true },
-        )
+        await Call.findByIdAndUpdate(dbCallId, { status: "rejected", duration: 0, endTime: new Date() }, { new: true })
       }
       const payload = { dbCallId, status: "rejected" }
       const caller = activeUsers.get(callerId)
@@ -289,6 +286,53 @@ io.on("connection", (socket) => {
     const target = activeUsers.get(toUserId)
     if (target) {
       io.to(target.socketId).emit("video-upgrade-response", data) // keep full payload (supports encryption)
+    }
+  })
+
+  // ---- Message Requests ----
+  socket.on("send-message-request", async (data) => {
+    try {
+      const { senderId, recipientId, message } = data
+      console.log(`[v0] Message request from ${senderId} to ${recipientId}`)
+
+      // Notify recipient
+      io.to(`user:${recipientId}`).emit("message-request-received", {
+        requestId: data.requestId,
+        senderId,
+        message,
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      console.error("[v0] Error in send-message-request:", error)
+    }
+  })
+
+  socket.on("accept-message-request", async (data) => {
+    try {
+      const { requestId, recipientId } = data
+      console.log(`[v0] Message request accepted: ${requestId}`)
+
+      // Notify sender
+      io.to(`user:${data.senderId}`).emit("message-request-accepted-notify", {
+        requestId,
+        recipientId,
+      })
+    } catch (error) {
+      console.error("[v0] Error in accept-message-request:", error)
+    }
+  })
+
+  socket.on("reject-message-request", async (data) => {
+    try {
+      const { requestId, senderId } = data
+      console.log(`[v0] Message request rejected: ${requestId}`)
+
+      // Notify sender
+      io.to(`user:${senderId}`).emit("message-request-rejected-notify", {
+        requestId,
+      })
+    } catch (error) {
+      console.error("[v0] Error in reject-message-request:", error)
     }
   })
 
