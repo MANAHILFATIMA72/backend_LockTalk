@@ -1103,7 +1103,7 @@ router.post(
       }
 
       // Check if user already exists
-      let user = await User.findOne({ phoneNumber: normalizedPhone })
+      const user = await User.findOne({ phoneNumber: normalizedPhone })
       if (user) {
         return res.status(409).json({
           error: "User already exists with this phone number. Please log in.",
@@ -1111,32 +1111,39 @@ router.post(
         })
       }
 
-      user = new User({
+      // Hash password before saving
+      const hashedPassword = await User.hashPassword(req.body.password)
+
+      // Don't set twoFARequired for regular new users
+      // It should only be required when an admin explicitly changes a user's role to admin/super_admin
+      const newUser = new User({
         phoneNumber: normalizedPhone,
         email,
-        name,
+        name: req.body.name,
+        password: hashedPassword,
+        isActive: true,
+        role: "user", // Default role for new users
+        // twoFARequired is NOT set here - it will only be set when role changes to admin/super_admin
         dob: dob ? new Date(dob) : null,
         about: about || null,
-        role: "user",
-        twoFARequired: true, // Initially require 2FA setup for new users
       })
 
-      await user.save()
+      await newUser.save()
       otpStore.delete(normalizedPhone)
       otpStore.delete(`email_${email}`)
 
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || "secret", {
+      const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || "secret", {
         expiresIn: "7d",
       })
 
       res.json({
         token,
         user: {
-          id: user._id,
+          id: newUser._id,
           phoneNumber: normalizedPhone,
           email,
           name,
-          role: user.role,
+          role: newUser.role,
         },
       })
     } catch (error) {
@@ -1219,8 +1226,9 @@ router.post(
         return res.status(400).json({ error: "Invalid or expired OTP" })
       }
 
-      if (user.twoFARequired && !user.twoFAEnabled) {
+      if (user.twoFARequired && !user.twoFAEnabled && (user.role === "admin" || user.role === "super_admin")) {
         // Return a special response indicating 2FA setup is required
+        // Only for actual admin/super_admin users, not regular users
         return res.json({
           token: null,
           requiresTwoFASetup: true,
@@ -2128,7 +2136,7 @@ router.post("/create-temp-token", [body("userId").notEmpty(), body("email").isEm
     const tempToken = jwt.sign(
       { userId: user._id, tempToken: true, purpose: "2fa-setup" },
       process.env.JWT_SECRET || "secret",
-      { expiresIn: "10m" }
+      { expiresIn: "10m" },
     )
 
     console.log("[v0] Temporary token created for 2FA setup:", userId)
