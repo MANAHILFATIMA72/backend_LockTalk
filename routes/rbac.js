@@ -155,12 +155,12 @@ router.post("/assign-role", verifyRole(["admin", "super_admin"]), async (req, re
     }
 
     const requestingUser = req.user
-
+    
     // Admins cannot change roles to/from admin or super_admin
     if (requestingUser.role === "admin") {
       if (role === "admin" || role === "super_admin" || user.role === "admin" || user.role === "super_admin") {
-        return res.status(403).json({
-          error: "Admin cannot add/remove admin or super admin roles. Only Super Admin can manage admin roles.",
+        return res.status(403).json({ 
+          error: "Admin cannot add/remove admin or super admin roles. Only Super Admin can manage admin roles." 
         })
       }
     } else if (requestingUser.role === "super_admin") {
@@ -175,15 +175,15 @@ router.post("/assign-role", verifyRole(["admin", "super_admin"]), async (req, re
     // Store the old role for the email notification
     const oldRole = user.role
 
-    const requiresTwoFA = ["admin", "super_admin", "moderator", "support_staff"].includes(role) && !user.twoFAEnabled
-
+    const requiresTwoFA = (role === "admin" || role === "super_admin") && !user.twoFAEnabled
+    
     const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {
+      userId, 
+      { 
         role,
-        ...(requiresTwoFA && { twoFARequired: true }),
-      },
-      { new: true },
+        ...(requiresTwoFA && { twoFARequired: true })
+      }, 
+      { new: true }
     )
 
     // Log the action
@@ -201,7 +201,7 @@ router.post("/assign-role", verifyRole(["admin", "super_admin"]), async (req, re
         updatedUser.email,
         updatedUser.name || updatedUser.email,
         oldRole,
-        role,
+        role
       )
       console.log(`[v0] Role change email notification ${emailSent ? "sent" : "failed"} for user ${updatedUser._id}`)
     } catch (emailError) {
