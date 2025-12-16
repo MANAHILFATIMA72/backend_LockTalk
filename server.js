@@ -435,7 +435,7 @@ cron.schedule("*/5 * * * *", async () => {
   }
 })
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 8000
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[v0] Server running on port ${PORT}`)
   console.log(`[v0] API URL: http://localhost:${PORT}/api`)
