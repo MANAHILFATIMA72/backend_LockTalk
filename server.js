@@ -26,7 +26,7 @@ const app = express()
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: "victorious-sherie-backendlocktalk-2dc4ee66.koyeb.app" || "http://localhost:3000",
     methods: ["GET", "POST"],
   },
   pingInterval: 5000,
